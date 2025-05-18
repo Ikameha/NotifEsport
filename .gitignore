@@ -1,15 +1,4 @@
-# Node
-node_modules
-
-# Next.js build
-.next
-out
-
-# Env
-.env
-.env.local
-.env.development
-.env.production
-
-# OS
-.DS_Store
+echo ".next/" >> .gitignore
+echo "node_modules/" >> .gitignore
+echo ".env*" >> .gitignore
+echo ".DS_Store" >> .gitignore
