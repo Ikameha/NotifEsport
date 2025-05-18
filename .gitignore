@@ -1,0 +1,15 @@
+# Node
+node_modules
+
+# Next.js build
+.next
+out
+
+# Env
+.env
+.env.local
+.env.development
+.env.production
+
+# OS
+.DS_Store
