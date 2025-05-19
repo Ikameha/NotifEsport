@@ -11,6 +11,7 @@ const PUBLIC_PATHS = [
   '/api/auth/logout',
   '/api/auth/session',
   '/api/auth/verify-request',
+  '/image',                          // <-- ou autorise tout le dossier si tu veux
   '/api/auth/error'
 ]
 
