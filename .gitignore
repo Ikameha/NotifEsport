@@ -1,4 +1,7 @@
-echo ".next/" >> .gitignore
-echo "node_modules/" >> .gitignore
-echo ".env*" >> .gitignore
-echo ".DS_Store" >> .gitignore
+# Fichiers lourds à ignorer
+.next
+node_modules
+*.log
+.env
+.env.local
+.cache
