@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Fichiers et dossiers à bloquer
+Disallow: /api/
+Disallow: /_next/
+Disallow: /*/edit/
+Disallow: /*/delete/
+
+# Sitemap
+Sitemap: https://notifesport.fr/sitemap.ts
