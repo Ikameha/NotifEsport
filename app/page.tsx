@@ -1,6 +1,8 @@
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight } from "lucide-react"
+import LandingImage from "@/components/LandingImage"
+
 
 export default function Home() {
   return (
@@ -36,16 +38,9 @@ export default function Home() {
         </div>
 
         <div className="flex-1 flex justify-center">
-          <div className="relative w-full max-w-md aspect-square">
-            <Image
-              src="/image/landing-illustration.png"
-              alt="Illustration eSport"
-              width={400}
-              height={400}
-              className="rounded-lg shadow-lg object-contain"
-            />
-          </div>
-        </div>
+  <LandingImage />
+</div>
+
       </section>
 
       {/* Section Fonctionnalités */}
