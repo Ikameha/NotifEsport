@@ -38,11 +38,11 @@ export default function Home() {
         <div className="flex-1 flex justify-center">
           <div className="relative w-full max-w-md aspect-square">
             <Image
-              src="/placeholder.svg?height=400&width=400"
-              alt="eSport illustration"
+              src="/image/landing-illustration.png"
+              alt="Illustration eSport"
               width={400}
               height={400}
-              className="rounded-lg shadow-lg"
+              className="rounded-lg shadow-lg object-contain"
             />
           </div>
         </div>
