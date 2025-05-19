@@ -48,7 +48,7 @@ function SignInForm() {
       setError(null);
       
       const redirectTo = searchParams?.get('redirectedFrom') || '/';
-      const redirectUrl = new URL(`${window.location.origin}/auth/callback`);
+      const redirectUrl = new URL(`${window.location.origin}/settings`);
       redirectUrl.searchParams.set('next', redirectTo);
       
       console.log('Initiating Google OAuth with redirect to:', redirectUrl.toString());
