@@ -3,12 +3,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getUpcomingMatches } from '@/lib/pandascore-client';
 import { transformPandaScoreMatch, PandaScoreMatch } from '@/lib/pandascore';
-import { addEmailToQueue } from '@/lib/queue';
 
 // Vérification des variables d'environnement requises
 const requiredEnvVars = [
-  'UPSTASH_REDIS_REST_URL',
-  'UPSTASH_REDIS_REST_TOKEN',
   'RESEND_API_KEY',
   'PANDASCORE_API_KEY'
 ];
@@ -526,17 +523,30 @@ export async function GET(request: Request) {
               throw new Error('Sujet ou contenu de l\'email invalide');
             }
             
-            await addEmailToQueue(
-              user.email,
-              emailSubject,
-              emailContent
-            );
-            
-            console.log(`Email ajouté à la file d'attente pour ${user.email}`);
-            
-            const userEmail = user.email || 'email_non_defini';
-            console.log(`Notification envoyée à ${userEmail} pour le match ${matchId}`);
-            totalNotifications++;
+            try {
+              const response = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+                },
+                body: JSON.stringify({
+                  from: 'notifications@notifesport.com',
+                  to: user.email,
+                  subject: emailSubject,
+                  html: emailContent,
+                }),
+              });
+
+              if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+              }
+              
+              console.log(`Email envoyé à ${user.email} pour le match ${matchId}`);
+              totalNotifications++;
+            } catch (error) {
+              console.error(`Erreur lors de l'envoi de l'email à ${user.email}:`, error);
+            }
             
           } catch (error) {
             const userEmail = user?.email || 'email_non_defini';
