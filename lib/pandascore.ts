@@ -9,7 +9,7 @@ interface FetchPandaScoreOptions {
   per_page?: number;
   sort?: string;
   filter?: Record<string, any>;
-  range?: Record<string, any>;
+  range?: string | Record<string, any>;
   search?: Record<string, any>;
 }
 
@@ -30,9 +30,15 @@ export async function fetchPandaScore(endpoint: string, options: FetchPandaScore
     });
   }
   if (options.range) {
-    Object.entries(options.range).forEach(([key, value]) => {
-      url.searchParams.append(`range[${key}]`, value.toString());
-    });
+    if (typeof options.range === 'string') {
+      // Si range est une chaîne, l'ajouter directement
+      url.searchParams.append('range', options.range);
+    } else {
+      // Sinon, traiter comme un objet
+      Object.entries(options.range).forEach(([key, value]) => {
+        url.searchParams.append(`range[${key}]`, value.toString());
+      });
+    }
   }
   if (options.search) {
     Object.entries(options.search).forEach(([key, value]) => {

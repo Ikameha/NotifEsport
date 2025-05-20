@@ -15,6 +15,8 @@ const PUBLIC_PATHS = [
   '/api/auth/error',
   '/favicon.ico',
   '/image', // ✅ permet l'accès public au dossier /image/*
+  '/api/notifications'  // Ajoutez cette ligne
+
 ]
 
 export async function middleware(request: NextRequest) {
