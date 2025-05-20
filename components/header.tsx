@@ -23,7 +23,7 @@ export default function Header() {
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center gap-2 text-forest font-bold text-xl">
           <Trophy className="w-6 h-6" />
-          <span>NotifSport</span>
+          <span>NotifEsport</span>
         </Link>
 
         {isLoading ? (
