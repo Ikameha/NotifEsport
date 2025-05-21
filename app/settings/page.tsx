@@ -136,112 +136,149 @@ export default function SettingsPage() {
   }, [user, supabase]);
 
   // Fonction pour envoyer un email de confirmation
-  const sendNotificationPreference = async (): Promise<{ success: boolean; error?: string }> => {
-    if (!user?.email) {
-      console.warn('Aucun email utilisateur disponible pour l\'envoi de la notification');
-      return { success: false, error: 'Aucun email utilisateur disponible' };
+const sendNotificationPreference = async (userEmail: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const selectedGames = games.filter(g => g.enabled).map(g => g.name);
+    const selectedLeagues = leagues.filter(l => l.enabled).map(l => l.name);
+    
+    const emailContent = `
+      <h2>Confirmation de vos préférences NotifEsport</h2>
+      <p>Bonjour,</p>
+      <p>Vous avez mis à jour vos préférences de notification :</p>
+      
+      <h3>Jeux sélectionnés :</h3>
+      <ul>${selectedGames.map(game => `<li>${game}</li>`).join('') || '<li>Aucun jeu sélectionné</li>'}</ul>
+      
+      <h3>Ligues sélectionnées :</h3>
+      <ul>${selectedLeagues.map(league => `<li>${league}</li>`).join('') || '<li>Aucune ligue sélectionnée</li>'}</ul>
+      
+      <p>Merci d'utiliser NotifEsport !</p>
+    `;
+    
+    const response = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: userEmail,
+        subject: 'Confirmation de vos préférences NotifEsport',
+        html: emailContent,
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
     }
     
-    try {
-      const selectedGames = games.filter(g => g.enabled).map(g => g.name);
-      const selectedLeagues = leagues.filter(l => l.enabled).map(l => l.name);
-      
-      const emailContent = `
-        <h2>Confirmation de vos préférences NotifEsport</h2>
-        <p>Bonjour,</p>
-        <p>Vous avez mis à jour vos préférences de notification :</p>
-        
-        <h3>Jeux sélectionnés :</h3>
-        <ul>${selectedGames.map(game => `<li>${game}</li>`).join('')}</ul>
-        
-        <h3>Ligues sélectionnées :</h3>
-        <ul>${selectedLeagues.map(league => `<li>${league}</li>`).join('')}</ul>
-        
-        <p>Merci d'utiliser NotifEsport !</p>
-      `;
-      
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: user.email,
-          subject: 'Confirmation de vos préférences NotifEsport',
-          html: emailContent,
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
-      }
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi de l\'email de confirmation:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Erreur inconnue' 
-      };
-    }
-  };
+    return { success: true };
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de l\'email de confirmation:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur inconnue lors de l\'envoi de l\'email' 
+    };
+  }
+};
 
-  // Gérer la sauvegarde des préférences
-  const savePreferences = async () => {
-    if (!user || !supabase) {
-      setNotification({
-        type: 'error',
-        message: 'Veuillez vous connecter pour sauvegarder vos préférences'
-      });
-      return;
+// Gérer la sauvegarde des préférences
+const savePreferences = async () => {
+  if (!user || !supabase || !user.email) {
+    setNotification({
+      type: 'error',
+      message: 'Veuillez vous connecter pour sauvegarder vos préférences'
+    });
+    return;
+  }
+
+  try {
+    setIsSaving(true);
+    
+    // 1. Vérifier l'utilisateur auth
+    const { data: { user: authUser }, error: authError } = 
+      await supabase.auth.getUser();
+    
+    if (authError || !authUser) {
+      throw new Error('Erreur d\'authentification. Veuillez vous reconnecter.');
     }
 
-    try {
-      setIsSaving(true);
-      
-      const preferences = {
-        games: games.filter(g => g.enabled).map(g => g.id),
-        leagues: leagues.filter(l => l.enabled).map(l => l.id),
-        favoriteTeams: favoriteTeams
-      };
+    // 2. Vérifier/créer l'utilisateur dans public.users
+    const { data: publicUser, error: userError } = await supabase
+      .from('users')
+      .select('id, email, email_notifications')
+      .eq('id', user.id)
+      .single();
 
-      const { error } = await supabase
-        .from('user_preferences')
-        .upsert({
-          user_id: user.id,
-          preferences,
+    if (userError?.code !== 'PGRST116' && userError) { // PGRST116 = no rows returned
+      console.error('Erreur vérification utilisateur:', userError);
+      throw new Error('Erreur lors de la vérification du profil utilisateur');
+    }
+
+    if (!publicUser) {
+      // Créer l'utilisateur avec l'email de l'auth
+      const { error: createError } = await supabase
+        .from('users')
+        .insert([{ 
+          id: user.id, 
+          email: user.email,
+          email_notifications: true,
+          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        });
+        }])
+        .select()
+        .single();
 
-      if (error) throw error;
-
-      // Envoyer un email de confirmation
-      const emailResult = await sendNotificationPreference();
-      
-      if (!emailResult.success) {
-        throw new Error(emailResult.error);
+      if (createError) {
+        console.error('Erreur création utilisateur:', createError);
+        throw new Error('Erreur lors de la création du profil utilisateur');
       }
-
-      setNotification({
-        type: 'success',
-        message: 'Vos préférences ont été enregistrées avec succès !'
-      });
-      
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-      
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde des préférences:', error);
-      setNotification({
-        type: 'error',
-        message: 'Une erreur est survenue lors de la sauvegarde de vos préférences. Veuillez réessayer.'
-      });
-    } finally {
-      setIsSaving(false);
     }
-  };
+
+    // 3. Sauvegarder les préférences
+    const preferences = {
+      games: games.filter(g => g.enabled).map(g => g.id),
+      leagues: leagues.filter(l => l.enabled).map(l => l.id),
+      favoriteTeams: favoriteTeams
+    };
+
+    const { error: upsertError } = await supabase
+      .from('user_preferences')
+      .upsert({
+        user_id: user.id,
+        preferences,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id'
+      });
+
+    if (upsertError) {
+      console.error('Erreur sauvegarde préférences:', upsertError);
+      throw new Error('Erreur lors de la sauvegarde des préférences');
+    }
+
+    // 4. Envoyer l'email de confirmation
+    const emailResult = await sendNotificationPreference(user.email);
+    if (!emailResult.success) {
+      console.warn('Email non envoyé:', emailResult.error);
+      // Ne pas échouer pour une erreur d'email
+    }
+
+    setNotification({
+      type: 'success',
+      message: 'Vos préférences ont été enregistrées avec succès !'
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde:', error);
+    setNotification({
+      type: 'error',
+      message: error instanceof Error ? error.message : 'Une erreur inattendue est survenue'
+    });
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   // Gérer la déconnexion
   const handleLogout = async () => {
